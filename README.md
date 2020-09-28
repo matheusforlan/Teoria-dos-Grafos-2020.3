@@ -3,4 +3,4 @@ Curso de Teoria dos Grafos da Universidade Federal de Campina Grande (UFCG) 2020
 
 Para acessar os grafos criados e o assunto de cada aula:
 
-src/main/java -> meusGrafos
+src -> main/java -> meusGrafos
