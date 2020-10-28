@@ -24,10 +24,8 @@ public class Aula07ImportDefaultDirectedGraph {
 	    									VertexEdgeUtil.createRelationshipDirectedEdgeSupplier(),false);
         ImportUtil.importDirectedGraphGML(g, graphpathname + "grid.gml");    		
         PrintUtil.printGraph(g);
-	    	
-        
+	    	    
         g.vertexSet().stream().forEach(v -> { 
-        	
         	System.out.println("Vértice " + v);
         	System.out.print("Grau de Entrada: " + g.inDegreeOf(v) + "|");
         	System.out.print("Grau de Saída: " + g.outDegreeOf(v) + "|");
@@ -35,7 +33,7 @@ public class Aula07ImportDefaultDirectedGraph {
         	System.out.print("Arcos onde é a cauda: " + g.outgoingEdgesOf(v) + "|");
         	System.out.print("Vizinhos de entrada: " + Graphs.predecessorListOf(g,v) + "|");
         	System.out.println("Vizinhos de saída: " + Graphs.successorListOf(g,v));
-        });
+        } );
 	}
 }
 
