@@ -1,7 +1,5 @@
 // Teoria dos Grafos - UFCG
 
-package epgs;
-
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
@@ -15,6 +13,7 @@ import java.util.Set;
 import org.jgrapht.Graph;
 import org.jgrapht.GraphPath;
 import org.jgrapht.alg.util.Pair;
+import org.jgrapht.graph.AsSubgraph;
 import org.jgrapht.graph.GraphWalk;
 import org.jgrapht.graph.WeightedMultigraph;
 
@@ -23,13 +22,19 @@ import util.ImportUtil;
 import util.RelationshipWeightedEdge;
 import util.VertexEdgeUtil;
 
+import org.jgrapht.GraphTests;
+
+
+import org.jgrapht.alg.shortestpath.YenKShortestPath;
+import org.jgrapht.alg.shortestpath.YenShortestPathIterator;
+
 public class EPG02LondonUnderground {
 	
 	//private static final String NL = System.getProperty("line.separator");
 	private static final String sep = System.getProperty("file.separator");
 	// path do folder onde os grafos a serem carregados estão armazenados
-	private static final String graphpathname = "." + sep + "src" + sep + "main" + sep +"java" + sep + "graphs" + sep;
-	private static final String datapathname = "." + sep + "src" + sep + "main" + sep +"java" + sep + "datasets" + sep;
+	private static final String graphpathname = "graphs" + sep;
+	private static final String datapathname = "datasets" + sep;
 	
 	Graph<DefaultVertex, RelationshipWeightedEdge> graph;
 	Set <DefaultVertex> V;
@@ -103,46 +108,230 @@ public class EPG02LondonUnderground {
 	
 	// Menor Trajeto de Trem entre duas Estações
 	public GraphPath <DefaultVertex, RelationshipWeightedEdge> shortestPath (String source, String sink) {
-		// Adicione aqui sua implementação
-		return emptyPath;
-	}
+	     DefaultVertex vsource = VertexEdgeUtil.getVertexfromLabel(graph.vertexSet(), source);
+	
+	    DefaultVertex vsink = VertexEdgeUtil.getVertexfromLabel(graph.vertexSet(), sink);
+	
+	    YenKShortestPath <DefaultVertex, RelationshipWeightedEdge> yenk = 
+					new YenKShortestPath <> (graph);
+	
+	
+			if (vsource == null || vsink == null){
+	      return emptyPath;
+	    } 
+	
+	    return yenk.getPaths(vsource, vsink, 1).get(0);
+		}
 	
 	// Troca de Linhas em um Trajeto
 	public List <Pair<String,RelationshipWeightedEdge>> changeofLines 
 						(GraphPath <DefaultVertex, RelationshipWeightedEdge> path) {
-		// Adicione aqui sua implementação
-		return new ArrayList <> ();
-	}
+		
+    
+	    List<RelationshipWeightedEdge>  edgeList = path.getEdgeList();
+	
+	    List<Pair<String, RelationshipWeightedEdge>> result = new ArrayList<>();
+	    String previousLine = null;
+	
+	   for (RelationshipWeightedEdge e : edgeList) {
+	    String line = e.getAtt("line").toString();
+	    if (line.equals(previousLine)) {
+	      continue;
+	    }
+	    
+	    Pair<String, RelationshipWeightedEdge> pair = new Pair<>(line,e);
+	
+	    result.add(pair);
+	
+	    previousLine = line;
+	   
+	   }
+	
+	    return result;
+			
+		}
 	
 	/////////////////////////////////////////////////
 	// Métodos a serem implementados no EPG02
 	// Tempo Total Estimado de um Trajeto
-	public double estimatedTime (GraphPath <DefaultVertex, RelationshipWeightedEdge> p, double t) {
-		// Adicione aqui sua implementação
-		return 0.0;
+	public double  estimatedTime (GraphPath <DefaultVertex, RelationshipWeightedEdge> p, double t) {
+    
+    double time = 0.0;
+       
+    List<RelationshipWeightedEdge>  edgeList = p.getEdgeList();
+
+    for (RelationshipWeightedEdge e : edgeList){
+
+      time += Double.parseDouble(e.getAtt("time").toString());
+      
+    }
+
+    List<Pair<String,RelationshipWeightedEdge>> list = changeofLines(p);
+    
+    if (t > 0 ) {
+    time += (list.size() * t);
+    }
+
+		return time;
 	}
 	
 	// Menor Trajeto considerando Tempo Total Estimado
 	public GraphPath <DefaultVertex, RelationshipWeightedEdge> shortestEstimatedPath 
-				(String source, String sink, double t, int maxAttempts) {
-		// Adicione aqui sua implementação
-		return emptyPath;
-	}
+				(String source, String sink, double t, int maxAttempts){
+		
+    
+     GraphPath<DefaultVertex, RelationshipWeightedEdge> result = emptyPath;
+     
+	     DefaultVertex vsource = VertexEdgeUtil.getVertexfromLabel(graph.vertexSet(),source);
 	
+	    DefaultVertex vsink = VertexEdgeUtil.getVertexfromLabel(graph.vertexSet(), sink);
+	    
+	    if(vsource != null) {
+	
+	      YenShortestPathIterator yenI = new YenShortestPathIterator(this.graph, vsource,vsink);
+	      int attempts = 0;
+	    
+	
+	      double lowestTime = 100000.0;
+	
+	      while(yenI.hasNext() && attempts < maxAttempts) {
+	        GraphPath<DefaultVertex, RelationshipWeightedEdge> path = yenI.next();
+	
+	        double time = estimatedTime(path,t);
+	     
+	        if (time < lowestTime) {
+	          lowestTime = time;
+	          result = path;
+	        }
+	        attempts++;
+	      }
+	
+	    }
+	    
+	    return result;
+	
+	
+		}
+		
 	// Menor Rota de uma Estação para Atrações Turísticas
 	public GraphPath <DefaultVertex, RelationshipWeightedEdge> bestRoute (String originStation, List<String> atts) {
-		// Adicione aqui sua implementação
-		return emptyPath;
+		
+    DefaultVertex vsource = VertexEdgeUtil.getVertexfromLabel(graph.vertexSet(), originStation);
+
+    GraphPath<DefaultVertex, RelationshipWeightedEdge> result = emptyPath;
+    GraphPath<DefaultVertex, RelationshipWeightedEdge> temp = emptyPath;
+    
+    // peso final do caminho. Será usado no final.
+    double weight = 0.0;
+    
+    // casos como o teste 1 , estação de origem válida mas lista de Atrações vazia
+    
+    if ((vsource != null) && ( atts.equals(new ArrayList())) ){
+       
+       return shortestPath(originStation, originStation);
+    
+    }
+    // casos como teste  4 e 5 , lista de Atrações inválida
+    
+    if (!attractions.keySet().containsAll(atts)) {
+      return emptyPath;
+    }
+
+    
+    
+    // caso comum
+    for (int i = 0 ; i <= atts.size(); i++) {
+      
+      //caminho até  ultima atração
+      if ( i < atts.size()) {
+        
+        DefaultVertex v = getStation(atts.get(i));
+
+        // primeiro caminho até a primeira atração.
+        if (result == emptyPath) {
+        
+        result = shortestPath(vsource.getLabel(), v.getLabel());
+        
+        //acumulador do peso do caminho final.
+        weight = result.getWeight();
+
+        //demais caminhos até a ultima atração.
+        } else {
+        
+          temp = shortestPath(vsource.getLabel(), v.getLabel());
+          // caso o vertice não exista em vertexList, é adicionado.
+          if ( !result.getVertexList().contains(v)) {
+            
+            result.getVertexList().add(v);
+          }
+          //adicionando as arestas a edgeList
+          result.getEdgeList().addAll(temp.getEdgeList());
+          //acumulador do peso do caminho final.
+          weight += temp.getWeight();
+        
+        }
+
+        // ultima estação se torna primeira no proximo caminho
+        vsource = v;
+      
+      //caminho da ultima atração até aestação de origem;
+      } else {
+        
+        DefaultVertex v = VertexEdgeUtil.getVertexfromLabel(graph.vertexSet(), originStation);
+
+        temp = shortestPath(vsource.getLabel(), originStation);
+
+        result.getEdgeList().addAll(temp.getEdgeList());
+
+        weight += temp.getWeight();
+
+        
+
+      }
+    }
+
+    // construindo um caminho válido com as informações de result e weight
+    result = new GraphWalk(graph, vsource,vsource, result.getVertexList(), result.getEdgeList(), weight);
+       
+    return result;
+
+
 	}
 	
 	// Trechos em Destaque
-	public List <RelationshipWeightedEdge> findSections (List <String> stations) {
+	public List <RelationshipWeightedEdge> findSections (List <String> stations){
 		// Adicione aqui sua implementação
-        return new ArrayList <> ();
-	}
+	    List<RelationshipWeightedEdge> arestasDasEstacoesAdjacentes = new ArrayList<>();
 	
-	public boolean serviceDisruption (List <String> stations) {
-		// Adicione aqui sua implementação
-		return false;
-	}
+	    for (int i = 0 ; i < stations.size(); i++) {
+	       DefaultVertex v = VertexEdgeUtil.getVertexfromLabel(graph.vertexSet(), stations.get(i));
+	
+	      if(v != null){
+	         Set<RelationshipWeightedEdge> arestasAdjacentes = graph.outgoingEdgesOf(v);
+	
+	         arestasDasEstacoesAdjacentes.addAll(arestasAdjacentes);
+	      }       
+	     }
+	  
+	    return arestasDasEstacoesAdjacentes;
+		}
+		
+		public boolean serviceDisruption (List <String> stations) {
+	    Set<DefaultVertex> subGraphVertexSet = new HashSet<>(graph.vertexSet());
+	
+	    for (String station : stations){
+	      DefaultVertex v = VertexEdgeUtil.getVertexfromLabel(graph.vertexSet(),station);
+	      subGraphVertexSet.remove(v);
+	    }
+	
+	    AsSubgraph<DefaultVertex, RelationshipWeightedEdge> inducedSubgraph = new AsSubgraph<>(graph, subGraphVertexSet);
+	
+	    if(GraphTests.isConnected(inducedSubgraph)) {
+	      return false;
+	    } else {
+	      return true;
+	    }
+	
+	
+		}
 }

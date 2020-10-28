@@ -1,6 +1,8 @@
 package epgs;
 
 //Teoria dos Grafos - UFCG
+//JGraphT EX05
+
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -36,8 +38,8 @@ public class EPG01LondonUnderground {
 		ImportUtil.importGraphMultipleCSV(graph, 
 				"graphs/london.stations.csv","id","name",
 				"graphs/london.connections.csv","station1", "station2", "time", false, true);
-		emptyPath = new GraphWalk <> (graph,new ArrayList <DefaultVertex> (), 0.0);
-		// Complemente este construtor se necessário
+ emptyPath = new GraphWalk <> (graph,new ArrayList <DefaultVertex> (), 0.0);
+ // Complemente este construtor se necessário
 	}
 	
 	// get methods
@@ -47,29 +49,103 @@ public class EPG01LondonUnderground {
 
 	// Estações Centrais
 	public List <DefaultVertex> centralKStations (int k) {
-		// Adicione aqui sua implementação
-		return new ArrayList <> ();
+		List <DefaultVertex> temp = new ArrayList<>(graph.vertexSet());
+		List <DefaultVertex> result = new ArrayList<>();
+		DegreeComparator comparator = new DegreeComparator(graph);
+		Collections.sort(temp, comparator);
+		Collections.reverse(temp);
+		 for ( int i = 0 ; i < k ; i++) {
+			 result.add(temp.get(i));
+		 }
+		
+		 return result;
 	}
 	
 	// Menor Trajeto de Trem entre duas Estações
 	public GraphPath <DefaultVertex, RelationshipWeightedEdge> shortestPath (String source, String sink) {
-		// Adicione aqui sua implementação
-		return emptyPath;
-	}
+ 
+	 DefaultVertex vsource = VertexEdgeUtil.getVertexfromLabel(graph.vertexSet(), source);
+	
+	 DefaultVertex vsink = VertexEdgeUtil.getVertexfromLabel(graph.vertexSet(), sink);
+	
+	 YenKShortestPath <DefaultVertex, RelationshipWeightedEdge> yenk = 
+					new YenKShortestPath <> (graph);
+	
+	
+			if (vsource == null || vsink == null){
+	   return emptyPath;
+	 } 
+	
+	 return yenk.getPaths(vsource, vsink, 1).get(0);
+		}
 	
 	// Troca de Linhas em um Trajeto
 	public List <Pair<String,RelationshipWeightedEdge>> changeofLines 
 						(GraphPath <DefaultVertex, RelationshipWeightedEdge> path) {
-		// Adicione aqui sua implementação
-		return new ArrayList <> ();
+	 List<RelationshipWeightedEdge>  edgeList = path.getEdgeList();
+	
+	 List<Pair<String, RelationshipWeightedEdge>> result = new ArrayList<>();
+	 String previousLine = null;
+	
+	for (RelationshipWeightedEdge e : edgeList) {
+	 String line = e.getAtt("line").toString();
+	 if (line.equals(previousLine)) {
+	   continue;
+	 }
+	 
+	 Pair<String, RelationshipWeightedEdge> pair = new Pair<>(line,e);
+	
+	 result.add(pair);
+	
+	 previousLine = line;
+	
 	}
+	
+	 return result;
+			
+		}
 	
 	// Menor Trajeto entre duas Estações sem usar Trens de uma Linha
 	public GraphPath <DefaultVertex, RelationshipWeightedEdge> shortestPathDropLine 
 			(String line, String source, String sink, int maxsteps) {
-		// Adicione aqui sua implementação    
-		return emptyPath;
-	}
+     
+	
+	 DefaultVertex vsource = VertexEdgeUtil.getVertexfromLabel(graph.vertexSet(), source);
+	
+	 DefaultVertex vsink = VertexEdgeUtil.getVertexfromLabel(graph.vertexSet(), sink);
+	
+	 YenShortestPathIterator <DefaultVertex, RelationshipWeightedEdge> yenI = 
+					new YenShortestPathIterator <> (graph, vsource,vsink);
+	     int cont = 0;
+	     
+	     
+	     GraphPath<DefaultVertex,RelationshipWeightedEdge> result = emptyPath;
+	 
+	
+	    while (yenI.hasNext() &&  cont < maxsteps) {
+	      boolean achou = true;
+	      
+	      GraphPath<DefaultVertex,RelationshipWeightedEdge> path = yenI.next();
+	
+	      for(RelationshipWeightedEdge e : path.getEdgeList()) {
+	        if (e.getAtt("line").toString().equals(line)) {
+	          achou = false;
+	          break;
+	        }
+	         
+	     
+	      }
+	      if (achou){
+	        result = path;
+	        break;
+	      }
+	      cont++;
+	
+	    } 
+			
+			return result;
+		}
 															
 }
+
 
